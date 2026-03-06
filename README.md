@@ -11,7 +11,6 @@ This project was created as a way to explore astronomy, physics, and interactive
 ---
 Features
 ---
----
 
 **Astronomical Object Search**
 
@@ -19,12 +18,14 @@ Search for stars or planets by name and retrieve metadata from **SIMBAD**:
 Object type  
 Spectral classification  
 Parallax
+
 ---
 **Example searches:**  
 Sirius  
 Betelgeuse  
 Sun  
 Mars
+
 ---
 **Interactive Spectrum Visualization**
 
@@ -40,6 +41,7 @@ Iron
 Calcium  
 Magnesium  
 Sodium  
+
 ---
 **Stellar Classification Simulation**
 
@@ -62,6 +64,7 @@ Black vertical lines represent absorption wavelengths of elements in the star’
 
 git clone https://github.com/BusterShrugz/spectra-explorer.git
 cd spectra-explorer
+
 ---
 ## Dependencies
 **pip install matplotlib numpy astroquery**  
@@ -69,6 +72,7 @@ Required libraries:
 NumPy  
 Matplotlib  
 Astroquery
+
 ---
 ## Project Structure
 spectra-explorer/  
@@ -83,6 +87,7 @@ astro_objects      → known object compositions
 stellar_classes    → stellar spectral models  
 plot_absorption()  → spectrum rendering  
 search_object()    → SIMBAD API queries  
+
 ---
 ## Future Improvements  
 **Planned enhancements include:**  
@@ -93,6 +98,7 @@ Real stellar spectra from astronomical surveys
 Interactive periodic table of elements  
 Radial velocity visualization for exoplanet detection  
 Web-based visualization  
+
 ---
 ## Author
 
