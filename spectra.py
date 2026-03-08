@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import TextBox
 import numpy as np
 from astroquery.simbad import Simbad
+import time
+
+last_query_time = 0
+QUERY_DELAY = 0.6
 
 # -------------------
 # Data
@@ -16,6 +20,7 @@ spectral_data = {
     "N": [149, 174, 178],
     "O": [557, 630, 636],
     "F": [640, 650],
+    "Fe": [438, 527, 533],
     "Ne": [540, 585, 703, 743],
     "Na": [589, 590],
     "Mg": [285, 383, 518],
@@ -71,21 +76,30 @@ autocomplete_cache = {}
 def search_object(name):
     try:
         simbad = Simbad()
-        simbad.add_votable_fields('otype','sp_type','plx_value')
+        simbad.add_votable_fields('otype','sp_type','plx_value', 'ra', 'dec')
+
         result = simbad.query_object(name)
 
         if result is None:
             print("Object not found.")
             return None
 
-      #print("Columns returned:", result.colnames)
-      #print(result)
-
         obj_type = result['otype'][0] if 'otype' in result.colnames else "Unknown"
         spectral_type = result['sp_type'][0] if 'sp_type' in result.colnames else "Unknown"
         parallax = result['plx_value'][0] if 'plx_value' in result.colnames else "Unknown"
+        ra = result['ra'][0] if 'ra' in result.colnames else "Unknown"
+        dec = result['dec'][0] if 'dec' in result.colnames else "Unknown"
 
-        return {"type": str(obj_type), "spectral_type": str(spectral_type), "parallax": str(parallax)}
+        print(result)
+        print(result.colnames)
+
+        return {
+            "type": str(obj_type),
+            "spectral_type": str(spectral_type),
+            "parallax": str(parallax),
+            "ra": str(ra),
+            "dec": str(dec)
+        }
 
     except Exception as e:
         print("Search error:", e)
@@ -95,7 +109,8 @@ def search_object(name):
 # Spectrum functions
 # -------------------
 def wavelength_to_rgb(wl, gamma=0.8):
-    if wl < 380 or wl > 750: return (0,0,0)
+    if wl < 380 or wl > 750:
+        return 0,0,0
     if wl<440:
         att=0.3+0.7*(wl-380)/(440-380)
         R=(-(wl-440)/(440-380)*att)**gamma; G=0; B=att**gamma
@@ -104,13 +119,21 @@ def wavelength_to_rgb(wl, gamma=0.8):
     elif wl<580: R=((wl-510)/(580-510))**gamma; G=1; B=0
     elif wl<645: R=1; G=(-(wl-645)/(645-580))**gamma; B=0
     else: att=0.3+0.7*(750-wl)/(750-645); R=att**gamma; G=0; B=0
-    return (R,G,B)
+    return R,G,B
 
 def draw_spectrum_bg():
     wl = np.linspace(380,750,1000)
     grad = np.zeros((1,len(wl),3))
     for i,w in enumerate(wl): grad[0,i]=wavelength_to_rgb(w)
     ax.imshow(grad,aspect='auto',extent=[380,750,0,1])
+
+def parallax_to_distance(plx):
+    try:
+        plx = float(plx)
+        if plx > 0:
+            return round(1000/plx,2)
+    except:
+        return "Unknown"
 
 def plot_absorption(elements, title):
     ax.clear()
@@ -137,13 +160,13 @@ def plot_absorption(elements, title):
                     lines.append(line)
 
                     ax.text(
-                        swl,
-                        0.95,
+                        2 + swl,
+                        0.5,
                         el,
-                        rotation=90,
+                        rotation=45,
                         ha='center',
                         va='bottom',
-                        fontsize=8
+                        fontsize=15
                     )
 
     ax.set_xlim(380,750)
@@ -179,6 +202,8 @@ hover_annotation.set_visible(False)
 # -------------------
 
 def on_text_change(text):
+    global last_query_time
+
     text = text.strip()
 
     # Don't search until at least 3 characters
@@ -186,6 +211,13 @@ def on_text_change(text):
         suggestion_text.set_text("")
         fig.canvas.draw_idle()
         return
+
+    now = time.time()
+
+    if now - last_query_time < QUERY_DELAY:
+        return
+
+    last_query_time = now
 
     suggestions = autocomplete(text)
 
@@ -198,22 +230,24 @@ def on_text_change(text):
 
 def autocomplete(prefix):
 
-    # Check cache first
     if prefix in autocomplete_cache:
         return autocomplete_cache[prefix]
 
     try:
         simbad = Simbad()
-        result = simbad.query_object(prefix + "*")
+        result = simbad.query_objectids(prefix)
 
         if result is None:
             return []
 
         names = []
+
         for r in result[:5]:
-            names.append(str(r["main_id"]).replace("NAME ", ""))
+            name = str(r["ID"]).replace("NAME ", "")
+            names.append(name)
 
         autocomplete_cache[prefix] = names
+
         return names
 
     except Exception:
@@ -257,6 +291,7 @@ text_box.on_text_change(on_text_change)
 def submit(text):
     global current_lines,current_text
     current_text = text.strip()
+
     # Local dictionary
     if current_text.upper() in stellar_classes:
         elements = stellar_classes[current_text.upper()]
@@ -272,17 +307,35 @@ def submit(text):
         return
     # SIMBAD search
     result = search_object(current_text)
+
     if result:
-        print("Found:",result)
-        spectral_type = result.get("spectral_type","Unknown")
-        if spectral_type != "Unknown" and len(spectral_type)>0:
+        print("Found:", result)
+
+        spectral_type = result.get("spectral_type", "Unknown")
+
+        temp = "Unknown"
+        distance = "Unknown"
+
+        if result.get("parallax") != "Unknown":
+            distance = parallax_to_distance(result["parallax"])
+
+        if spectral_type != "Unknown" and len(spectral_type) > 0:
             star_class = spectral_type[0].upper()
+
             temp = stellar_temperatures.get(star_class, "Unknown")
+
             if star_class in stellar_classes:
                 elements = stellar_classes[star_class]
-                current_lines[:] = plot_absorption(elements,f"{current_text} ({star_class}-Type)")
+                current_lines[:] = plot_absorption(elements, f"{current_text} ({star_class}-Type)")
+        else:
+            current_lines[:] = plot_absorption(stellar_classes["G"], f"{current_text} (Unknown Star)")
+
         info_text.set_text(
-            f"Type: {result['type']} | Spectral: {result['spectral_type']} | Temp: {temp} | Parallax: {result['parallax']}"
+            f"Type: {result.get('type', 'Unknown')} | "
+            f"Spectral: {result.get('spectral_type', 'Unknown')} | "
+            f"Temp: {temp} | "
+            f"Parallax: {result.get('parallax', 'Unknown')} | "
+            f"Distance: {distance} pc"
         )
         fig.canvas.draw_idle()
     else:
