@@ -63,7 +63,7 @@ producing a realistic visible light spectrum.
 ---
 ## Installation
 
-git clone https://github.com/BusterShrugz/spectra-explorer.git  
+git clone https://github.com/BusterShrugz/spectraapplication.git  
 cd spectra-explorer
 
 ---
