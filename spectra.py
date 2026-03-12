@@ -141,36 +141,74 @@ def plot_absorption(elements, title):
 
     lines = []
 
+    # --- gather all spectral lines ---
+    spectral_lines = []
     for el in elements:
         if el in spectral_data:
             for wl in spectral_data[el]:
+                if 380 <= wl <= 750:
+                    spectral_lines.append((wl, el))
 
-                swl = wl
+    spectral_lines.sort()
 
-                if 380 <= swl <= 750:
+    # --- cluster nearby wavelengths ---
+    clusters = []
+    cluster = []
 
-                    color = 'black'
-                    if spectrum_mode == "emission":
-                        color = wavelength_to_rgb(swl)
+    CLUSTER_THRESHOLD = 6  # nm
 
-                    line = ax.axvline(swl, color=color, linewidth=2, picker=5)
+    for wl, el in spectral_lines:
+        if not cluster:
+            cluster.append((wl, el))
+            continue
 
-                    line.element = el
-                    line.wavelength = swl
-                    lines.append(line)
+        if abs(wl - cluster[-1][0]) < CLUSTER_THRESHOLD:
+            cluster.append((wl, el))
+        else:
+            clusters.append(cluster)
+            cluster = [(wl, el)]
 
-                    ax.text(
-                        2 + swl,
-                        0.5,
-                        el,
-                        rotation=45,
-                        ha='center',
-                        va='bottom',
-                        fontsize=15
-                    )
+    if cluster:
+        clusters.append(cluster)
 
-    ax.set_xlim(380,750)
-    ax.set_ylim(0,1)
+    # --- plot clusters ---
+    y_levels = np.linspace(0.8, 0.95, 6)
+
+    for cluster in clusters:
+        for i, (wl, el) in enumerate(cluster):
+
+            color = 'black'
+            if spectrum_mode == "emission":
+                color = wavelength_to_rgb(wl)
+
+            line = ax.axvline(wl, color=color, linewidth=2, picker=5, zorder=2)
+
+            line.element = el
+            line.wavelength = wl
+            lines.append(line)
+
+            y = y_levels[i % len(y_levels)]
+            x_offset = 3 + i * 1.5
+
+            ax.annotate(
+                el,
+                xy=(wl, 0.78),  # anchor at spectral line
+                xytext=(wl + x_offset, y),  # move label away
+                textcoords="data",
+                ha="left",
+                va="center",
+                fontsize=10,
+                bbox=dict(fc="white", alpha=0.7, edgecolor="none"),
+                arrowprops=dict(
+                    arrowstyle="-",
+                    color="gray",
+                    lw=1.8
+                ),
+                zorder=3
+            )
+
+    ax.set_xlim(380, 750)
+    ax.set_ylim(0, 1)
     ax.set_title(title)
     ax.set_xlabel("Wavelength (nm)")
     ax.set_yticks([])
