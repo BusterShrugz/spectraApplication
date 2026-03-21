@@ -105,41 +105,41 @@ def search_object(name):
 def wavelength_to_rgb(wl, gamma=0.8):
 
     if wl < 380 or wl > 750:
-        return (0,0,0)
+        return 0,0,0
 
     if wl < 440:
         attenuation=0.3 + 0.7*(wl-380)/(440-380)
-        R = (-(wl-440)/(440-380)*attenuation)**gamma
-        G = 0
-        B = attenuation**gamma
+        red = (-(wl-440)/(440-380)*attenuation)**gamma
+        green = 0
+        blue = attenuation**gamma
 
     elif wl < 490:
-        R = 0
-        G = ((wl-440)/(490-440))**gamma
-        B = 1
+        red = 0
+        green = ((wl-440)/(490-440))**gamma
+        blue = 1
 
     elif wl < 510:
-        R = 0
-        G = 1
-        B = (-(wl-510)/(510-490))**gamma
+        red = 0
+        green = 1
+        blue = (-(wl-510)/(510-490))**gamma
 
     elif wl < 580:
-        R = ((wl-510)/(580-510))**gamma
-        G = 1
-        B = 0
+        red = ((wl-510)/(580-510))**gamma
+        green = 1
+        blue = 0
 
     elif wl < 645:
-        R = 1
-        G = (-(wl-645)/(645-580))**gamma
-        B = 0
+        red = 1
+        green = (-(wl-645)/(645-580))**gamma
+        blue = 0
 
     else:
         attenuation = 0.3 + 0.7*(750-wl)/(750-645)
-        R = attenuation**gamma
-        G = 0
-        B = 0
+        red= attenuation**gamma
+        green = 0
+        blue = 0
 
-    return (R,G,B)
+    return red, green, blue
 
 def draw_spectrum_bg():
 
@@ -311,8 +311,8 @@ def on_hover(event):
     fig.canvas.draw_idle()
 
 
-'''# TextBox
-text_box_ax = plt.axes([0.35,0.9,0.4,0.05])
+# TextBox
+'''text_box_ax = plt.axes([0.35,0.9,0.4,0.05])
 text_box = TextBox(text_box_ax,'Enter Planet/Star or Class: ')
 suggestion_text = fig.text(
     0.5,
